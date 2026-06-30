@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi App Test</title>
+    <!-- Nhúng thư viện Pi SDK -->
+    <script src="https://minepi.com"></script>
+</head>
+<body>
+    <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
+        <h1>Ứng dụng Pi AgriGlobal</h1>
+        <button id="login-btn" style="padding: 10px 20px; background-color: #6200ee; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">
+            Đăng nhập bằng Pi
+        </button>
+        <p id="user-info" style="margin-top: 20px; font-weight: bold; color: green;"></p>
+    </div>
+
+    <script>
+        // Khởi tạo Pi SDK (Chạy trên Testnet)
+        Pi.init({ version: "2.0", sandbox: true });
+
+        document.getElementById('login-btn').addEventListener('click', async () => {
+            const scopes = ['username', 'payments'];
+            
+            function onIncompletePaymentFound(payment) {
+                console.log("Giao dịch chưa hoàn thành:", payment);
+            };
+
+            try {
+                // Yêu cầu đăng nhập tài khoản Pi
+                const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
+                document.getElementById('user-info').innerText = `Xin chào Pioneer: ${auth.user.username}`;
+            } catch (error) {
+                alert("Lỗi kết nối Pi! Hãy chắc chắn bạn đang mở link này TRONG trình duyệt Pi Browser.");
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>
