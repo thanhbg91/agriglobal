@@ -78,11 +78,84 @@ class MarketViewModel(
         "JPY" to "¥"
     )
 
+    // --- Cloud Backend API Sync ---
+    private val _backendBaseUrl = MutableStateFlow("")
+    val backendBaseUrl: StateFlow<String> = _backendBaseUrl.asStateFlow()
+
+    private val _syncStatus = MutableStateFlow<String?>(null)
+    val syncStatus: StateFlow<String?> = _syncStatus.asStateFlow()
+
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+    private val _connectionStatus = MutableStateFlow("Chưa kiểm tra")
+    val connectionStatus: StateFlow<String> = _connectionStatus.asStateFlow()
+
+    private val _isCheckingConnection = MutableStateFlow(false)
+    val isCheckingConnection: StateFlow<Boolean> = _isCheckingConnection.asStateFlow()
+
     init {
         // Run database pre-population
         viewModelScope.launch {
             repository.prepopulateDatabaseIfNeeded()
         }
+        // Load stored URL
+        _backendBaseUrl.value = com.example.api.BackendClient.getStoredBaseUrl(application)
+    }
+
+    fun updateBackendUrl(url: String) {
+        _backendBaseUrl.value = url
+        com.example.api.BackendClient.saveBaseUrl(getApplication(), url)
+        _connectionStatus.value = "Chưa kiểm tra"
+    }
+
+    fun checkBackendConnection() {
+        viewModelScope.launch {
+            _isCheckingConnection.value = true
+            _connectionStatus.value = "Đang kết nối..."
+            val result = com.example.api.BackendClient.testConnection(_backendBaseUrl.value)
+            _connectionStatus.value = result.second
+            _isCheckingConnection.value = false
+        }
+    }
+
+    fun syncAllToCloudBackend() {
+        viewModelScope.launch {
+            _isSyncing.value = true
+            _syncStatus.value = "Bắt đầu đồng bộ..."
+            
+            val url = _backendBaseUrl.value
+            val currentListings = userListings.value
+            val currentOrders = cartItems.value
+            
+            var successCount = 0
+            var failCount = 0
+
+            // 1. Sync User Listings (Products)
+            currentListings.forEach { product ->
+                _syncStatus.value = "Đang đồng bộ sản phẩm: ${product.name}..."
+                val res = com.example.api.BackendClient.uploadProduct(url, product)
+                if (res.first) successCount++ else failCount++
+            }
+
+            // 2. Sync Trade Contracts (CartItems)
+            currentOrders.forEach { item ->
+                _syncStatus.value = "Đang đồng bộ giao dịch: ${item.productName}..."
+                val res = com.example.api.BackendClient.uploadOrder(url, item)
+                if (res.first) successCount++ else failCount++
+            }
+
+            _isSyncing.value = false
+            if (failCount == 0) {
+                _syncStatus.value = "Đồng bộ đám mây hoàn tất thành công! Tổng cộng: $successCount bản ghi."
+            } else {
+                _syncStatus.value = "Đồng bộ hoàn tất với lỗi. Thành công: $successCount, Thất bại: $failCount."
+            }
+        }
+    }
+
+    fun clearSyncStatus() {
+        _syncStatus.value = null
     }
 
     fun selectCurrency(currency: String) {

@@ -35,11 +35,27 @@ import com.example.viewmodel.MarketViewModel
 fun ProfileScreen(
     viewModel: MarketViewModel,
     onProductClick: (Product) -> Unit,
+    onLogoutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val userListings by viewModel.userListings.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
     val cartItems by viewModel.cartItems.collectAsState()
+
+    val backendBaseUrl by viewModel.backendBaseUrl.collectAsState()
+    val syncStatus by viewModel.syncStatus.collectAsState()
+    val isSyncing by viewModel.isSyncing.collectAsState()
+    val connectionStatus by viewModel.connectionStatus.collectAsState()
+    val isCheckingConnection by viewModel.isCheckingConnection.collectAsState()
+
+    var showServerSettingsDialog by remember { mutableStateOf(false) }
+    var tempUrlInput by remember { mutableStateOf(backendBaseUrl) }
+
+    LaunchedEffect(showServerSettingsDialog) {
+        if (showServerSettingsDialog) {
+            tempUrlInput = backendBaseUrl
+        }
+    }
 
     var activeTab by remember { mutableStateOf("listings") } // "listings", "favorites", "sales"
 
@@ -58,7 +74,15 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Không Gian Doanh Nghiệp", fontWeight = FontWeight.Bold) }
+                title = { Text("Không Gian Doanh Nghiệp", fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = { showServerSettingsDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Cấu hình Server API"
+                        )
+                    }
+                }
             )
         },
         modifier = modifier
@@ -77,48 +101,84 @@ fun ProfileScreen(
                     .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline))
                     .padding(12.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Avatar Placeholder
-                    Box(
-                        modifier = Modifier
-                            .size(54.dp)
-                            .background(MaterialTheme.colorScheme.primary, shape = CircleShape),
-                        contentAlignment = Alignment.Center
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "AG",
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
-                    }
+                        val localContext = androidx.compose.ui.platform.LocalContext.current
+                        val username = remember { com.example.api.AuthManager.getStoredUsername(localContext) }
+                        val userEmail = remember { com.example.api.AuthManager.getStoredEmail(localContext) }
+                        val avatarInitials = remember(username) {
+                            val cleanName = username.trim()
+                            if (cleanName.contains(" ")) {
+                                val parts = cleanName.split(" ").filter { it.isNotBlank() }
+                                if (parts.size >= 2) {
+                                    (parts[0].take(1) + parts[1].take(1)).uppercase()
+                                } else {
+                                    cleanName.take(2).uppercase()
+                                }
+                            } else if (cleanName.length >= 2) {
+                                cleanName.take(2).uppercase()
+                            } else {
+                                "AG"
+                            }
+                        }
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Text(
-                            text = "Doanh nghiệp Hợp tác xã AgriGlobal",
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
-                        )
-                        Text(
-                            text = "Hội viên xuất nhập khẩu nông nghiệp số",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Verified,
-                                contentDescription = "Xác minh",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(13.dp)
-                              )
-                            Spacer(modifier = Modifier.width(3.dp))
+                        // Avatar Placeholder
+                        Box(
+                            modifier = Modifier
+                                .size(54.dp)
+                                .background(MaterialTheme.colorScheme.primary, shape = CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                text = "Hồ sơ thông quan hải quan điện tử sẵn sàng",
-                                fontSize = 10.sp,
+                                text = avatarInitials,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = username,
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                            )
+                            Text(
+                                text = if (userEmail.isNotBlank()) "Tài khoản: $userEmail" else "Hội viên xuất nhập khẩu nông nghiệp số",
+                                fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Verified,
+                                    contentDescription = "Xác minh",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "Đã thông quan hải quan điện tử",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Compact Logout button
+                        IconButton(
+                            onClick = onLogoutClick,
+                            modifier = Modifier.testTag("logout_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Logout,
+                                contentDescription = "Đăng xuất",
+                                tint = MaterialTheme.colorScheme.error
                             )
                         }
                     }
@@ -366,6 +426,156 @@ fun ProfileScreen(
                 confirmButton = {
                     Button(onClick = { showSuccessToast = false }) {
                         Text("Đồng ý", fontSize = 12.sp)
+                    }
+                }
+            )
+        }
+
+        // Server Settings and Sync Dialog
+        if (showServerSettingsDialog) {
+            AlertDialog(
+                onDismissRequest = { 
+                    if (!isSyncing && !isCheckingConnection) {
+                        showServerSettingsDialog = false 
+                        viewModel.clearSyncStatus()
+                    }
+                },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Cloud, 
+                            contentDescription = null, 
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Đồng Bộ Cloud API", 
+                            fontWeight = FontWeight.Bold, 
+                            fontSize = 16.sp
+                        )
+                    }
+                },
+                text = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Nhập URL của Backend API để đồng bộ đăng tin sản phẩm và lịch sử giao dịch nông sản cục bộ lên máy chủ cơ sở dữ liệu (PostgreSQL, MySQL, MongoDB).",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        OutlinedTextField(
+                            value = tempUrlInput,
+                            onValueChange = { tempUrlInput = it },
+                            label = { Text("Địa chỉ API Server URL", fontSize = 11.sp) },
+                            placeholder = { Text("http://10.0.2.2:5000") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            enabled = !isSyncing && !isCheckingConnection
+                        )
+
+                        // Info details
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text("💡 Hướng dẫn địa chỉ:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                Text("• Android Emulator: http://10.0.2.2:5000", fontSize = 9.sp)
+                                Text("• Thiết bị thật: Nhập IP máy tính chạy API (ví dụ: http://192.168.1.15:5000)", fontSize = 9.sp)
+                            }
+                        }
+
+                        // Connection Checker Section
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Button(
+                                onClick = { 
+                                    viewModel.updateBackendUrl(tempUrlInput.trim())
+                                    viewModel.checkBackendConnection() 
+                                },
+                                enabled = tempUrlInput.isNotBlank() && !isCheckingConnection && !isSyncing,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                if (isCheckingConnection) {
+                                    CircularProgressIndicator(modifier = Modifier.size(14.dp), color = MaterialTheme.colorScheme.onSecondary, strokeWidth = 2.dp)
+                                } else {
+                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Kiểm tra kết nối", fontSize = 11.sp)
+                                }
+                            }
+
+                            Text(
+                                text = connectionStatus,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (connectionStatus.contains("Lỗi") || connectionStatus.contains("Không thể")) Color.Red else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.weight(1f).padding(start = 8.dp),
+                                textAlign = TextAlign.End
+                            )
+                        }
+
+                        Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
+                        // Cloud Synchronization Section
+                        Button(
+                            onClick = { 
+                                viewModel.updateBackendUrl(tempUrlInput.trim())
+                                viewModel.syncAllToCloudBackend() 
+                            },
+                            enabled = tempUrlInput.isNotBlank() && !isCheckingConnection && !isSyncing,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.fillMaxWidth().height(44.dp)
+                        ) {
+                            if (isSyncing) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Đang tải dữ liệu lên...", fontSize = 12.sp)
+                            } else {
+                                Icon(Icons.Default.CloudUpload, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("ĐỒNG BỘ TOÀN BỘ ĐÁM MÂY", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                            }
+                        }
+
+                        // Sync Status Progress Message
+                        syncStatus?.let { statusMsg ->
+                            Text(
+                                text = statusMsg,
+                                fontSize = 11.sp,
+                                color = if (statusMsg.contains("thành công")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth().background(
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ).padding(8.dp)
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { 
+                            showServerSettingsDialog = false 
+                            viewModel.clearSyncStatus()
+                        },
+                        enabled = !isSyncing && !isCheckingConnection
+                    ) {
+                        Text("Đóng", fontSize = 12.sp)
                     }
                 }
             )
