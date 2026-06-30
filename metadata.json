@@ -1,0 +1,6 @@
+{
+  "name": "AgriGlobal",
+  "description": "Sàn thương mại điện tử chuyên trao đổi mua bán nông sản trên toàn cầu, tích hợp trợ lý AI thông minh hỗ trợ dịch thuật, phân tích giá cả và hướng dẫn xuất nhập khẩu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
