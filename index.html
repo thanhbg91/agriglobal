@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pi App Test</title>
-    <!-- Nhúng thư viện Pi SDK chính thức chuẩn mới nhất -->
-    <script src="https://minepi.com"></script>
+    <!-- ĐÃ SỬA: Nhúng thư viện Pi SDK nội bộ từ chính GitHub của bạn -->
+    <script src="pi-sdk.js"></script>
 </head>
 <body>
     <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif; padding: 20px;">
@@ -22,7 +22,7 @@
     </div>
 
     <script>
-        // Hàm hiển thị logs lên màn hình điện thoại
+        // Hàm hiển thị trạng thái lên màn hình điện thoại
         function logStatus(message) {
             document.getElementById('status-info').innerText = message;
         }
