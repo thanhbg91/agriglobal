@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pi App Test</title>
-    <!-- ĐÃ SỬA: Nhúng thư viện Pi SDK nội bộ từ chính GitHub của bạn -->
+    <!-- Nhúng thư viện Pi SDK nội bộ từ chính GitHub của bạn -->
     <script src="pi-sdk.js"></script>
 </head>
 <body>
@@ -57,6 +57,7 @@
             
             const scopes = ['username', 'payments'];
             
+            // Hàm callback bắt buộc xử lý khi có giao dịch bị treo (Luôn trả về log để tránh bị nghẽn luồng)
             function onIncompletePaymentFound(payment) {
                 console.log("Tìm thấy giao dịch chưa hoàn thành:", payment);
             }
@@ -70,7 +71,7 @@
                 })
                 .catch(function(error) {
                     // Đăng nhập thất bại hoặc bị kẹt
-                    logError(JSON.stringify(error) || "Trình duyệt không phản hồi hoặc bị chặn session.");
+                    logError(typeof error === 'object' ? JSON.stringify(error) : error);
                 });
         });
     </script>
