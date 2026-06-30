@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pi App Test</title>
-    <!-- Nhúng thư viện Pi SDK nội bộ từ chính GitHub của bạn -->
-    <script src="pi-sdk.js"></script>
+    <!-- ĐÃ SỬA: Thêm ?v=2 để ép trình duyệt xóa cache và nạp file pi-sdk.js mới -->
+    <script src="pi-sdk.js?v=2"></script>
 </head>
 <body>
     <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif; padding: 20px;">
@@ -57,7 +57,7 @@
             
             const scopes = ['username', 'payments'];
             
-            // Hàm callback bắt buộc xử lý khi có giao dịch bị treo (Luôn trả về log để tránh bị nghẽn luồng)
+            // Hàm callback bắt buộc xử lý khi có giao dịch bị treo
             function onIncompletePaymentFound(payment) {
                 console.log("Tìm thấy giao dịch chưa hoàn thành:", payment);
             }
