@@ -4,55 +4,73 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pi App Test</title>
-    <!-- Nhúng thư viện Pi SDK chính thức -->
+    <!-- Nhúng thư viện Pi SDK chính thức chuẩn mới nhất -->
     <script src="https://minepi.com"></script>
 </head>
 <body>
-    <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
-        <h1>Ứng dụng Pi AgriGlobal</h1>
-        <button id="login-btn" style="padding: 12px 24px; background-color: #6200ee; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">
+    <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif; padding: 20px;">
+        <h1 style="color: #333;">Ứng dụng Pi AgriGlobal</h1>
+        
+        <button id="login-btn" style="padding: 14px 28px; background-color: #6200ee; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s;">
             Đăng nhập bằng Pi
         </button>
+        
+        <!-- Các vùng hiển thị trạng thái kết nối -->
+        <p id="status-info" style="margin-top: 25px; font-size: 16px; color: #555; font-style: italic;"></p>
         <p id="user-info" style="margin-top: 20px; font-weight: bold; color: green; font-size: 18px;"></p>
-        <p id="error-info" style="margin-top: 20px; color: red; font-size: 14px;"></p>
+        <p id="error-info" style="margin-top: 20px; color: red; font-size: 14px; font-family: monospace; background: #fff5f5; padding: 10px; border-radius: 5px; display: none; border: 1px solid #ffe3e3;"></p>
     </div>
 
     <script>
-        function showLog(message, isError = false) {
-            const target = isError ? document.getElementById('error-info') : document.getElementById('user-info');
-            target.innerText = message;
+        // Hàm hiển thị logs lên màn hình điện thoại
+        function logStatus(message) {
+            document.getElementById('status-info').innerText = message;
+        }
+        
+        function logUser(username) {
+            document.getElementById('user-info').innerText = "Xin chào Pioneer: " + username;
+            document.getElementById('error-info').style.display = "none";
+        }
+        
+        function logError(errMessage) {
+            const errBox = document.getElementById('error-info');
+            errBox.innerText = "Chi tiết lỗi: " + errMessage;
+            errBox.style.display = "block";
+            document.getElementById('status-info').innerText = "";
         }
 
-        // Khởi tạo Pi SDK cơ bản cho môi trường Testnet Sandbox
+        // 1. Khởi tạo Pi SDK cho môi trường Testnet Sandbox
         try {
+            logStatus("Đang khởi tạo Pi SDK...");
             Pi.init({ 
                 version: "2.0", 
                 sandbox: true 
             });
-            console.log("Pi SDK đã khởi tạo.");
+            logStatus("Pi SDK đã sẵn sàng. Hãy bấm nút Đăng nhập.");
         } catch (e) {
-            showLog("Lỗi khởi tạo: " + e.message, true);
+            logError("Lỗi khởi tạo SDK: " + e.message);
         }
 
-        // Xử lý sự kiện bấm nút Đăng nhập
+        // 2. Xử lý sự kiện khi bấm nút Đăng nhập
         document.getElementById('login-btn').addEventListener('click', function() {
-            showLog("Đang kết nối với Pi Network...");
+            logStatus("Đang gửi yêu cầu xác thực tới Pi Network...");
             
             const scopes = ['username', 'payments'];
             
             function onIncompletePaymentFound(payment) {
-                console.log("Giao dịch chưa hoàn thành:", payment);
+                console.log("Tìm thấy giao dịch chưa hoàn thành:", payment);
             }
 
+            // Gọi hàm kích hoạt đăng nhập của hệ thống Pi
             Pi.authenticate(scopes, onIncompletePaymentFound)
                 .then(function(auth) {
-                    // Đăng nhập thành công, hiển thị tên người dùng
-                    showLog("Xin chào Pioneer: " + auth.user.username);
-                    document.getElementById('error-info').innerText = ""; 
+                    // Đăng nhập thành công
+                    logStatus("Xác thực tài khoản thành công!");
+                    logUser(auth.user.username);
                 })
                 .catch(function(error) {
-                    // Hiển thị chi tiết lỗi trực tiếp lên màn hình điện thoại
-                    showLog("Đăng nhập thất bại: " + JSON.stringify(error), true);
+                    // Đăng nhập thất bại hoặc bị kẹt
+                    logError(JSON.stringify(error) || "Trình duyệt không phản hồi hoặc bị chặn session.");
                 });
         });
     </script>
